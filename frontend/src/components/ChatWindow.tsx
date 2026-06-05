@@ -2,7 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { Send, MapPin, ExternalLink, RefreshCw, Home } from 'lucide-react';
 
-export const ChatWindow: React.FC = () => {
+interface ChatWindowProps {
+  setView?: (view: string) => void;
+  setSelectedProperty?: (prop: any) => void;
+}
+
+export const ChatWindow: React.FC<ChatWindowProps> = ({ setView, setSelectedProperty }) => {
   const { 
     user, 
     chats, 
@@ -96,7 +101,7 @@ export const ChatWindow: React.FC = () => {
   const myWishlistProperties = properties.filter(p => wishlist.includes(p.id));
 
   return (
-    <div className="flex-1 flex flex-col bg-white border border-amber-200/60 rounded-3xl overflow-hidden shadow-sm h-[600px]">
+    <div className="flex-1 flex flex-col bg-white border border-amber-200/60 rounded-3xl overflow-hidden shadow-sm h-80 md:h-[600px]">
       {/* Header */}
       <div className="flex items-center justify-between p-4 bg-white border-b border-amber-100">
         <div className="flex items-center gap-3">
@@ -158,13 +163,18 @@ export const ChatWindow: React.FC = () => {
                     </div>
                     <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100">
                       <span className="text-xs font-extrabold text-amber-500">{sharedProp.rent} / mo</span>
-                      <a 
-                        href="#" 
-                        onClick={(e) => { e.preventDefault(); /* Trigger parent page action or details click */ }}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (setView && setSelectedProperty && sharedProp) {
+                            setSelectedProperty(properties.find(p => p.id === sharedProp.id));
+                            setView('property-details');
+                          }
+                        }}
                         className="text-[10px] text-slate-400 hover:text-amber-500 flex items-center gap-0.5"
                       >
                         Details <ExternalLink className="w-2.5 h-2.5" />
-                      </a>
+                      </button>
                     </div>
                   </div>
                 </div>

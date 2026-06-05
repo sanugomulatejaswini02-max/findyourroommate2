@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Navbar } from './components/Navbar';
+import { Footer } from './components/ui/modem-animated-footer';
+import { Logo } from './components/Logo';
+import { Github, Mail } from 'lucide-react';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
@@ -14,6 +17,7 @@ import { WishlistPage } from './pages/WishlistPage';
 import { ChatPage } from './pages/ChatPage';
 import { UserProfilePage } from './pages/UserProfilePage';
 import { AdminDashboard } from './pages/AdminDashboard';
+import { motion, AnimatePresence } from 'framer-motion';
 const AppContent: React.FC = () => {
   const { user, loading } = useApp();
   const [view, setView] = useState<string>('landing');
@@ -84,7 +88,7 @@ const AppContent: React.FC = () => {
       case 'wishlist':
         return <WishlistPage setView={setView} setSelectedProperty={setSelectedProperty} />;
       case 'chat':
-        return <ChatPage />;
+        return <ChatPage setView={setView} setSelectedProperty={setSelectedProperty} />;
       case 'profile':
         return <UserProfilePage />;
       case 'admin':
@@ -112,8 +116,35 @@ const AppContent: React.FC = () => {
 
       {/* Main Page Content */}
       <main className="mt-4">
-        {renderView()}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={view}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+          >
+            {renderView()}
+          </motion.div>
+        </AnimatePresence>
       </main>
+
+      {/* Footer */}
+      <Footer
+        brandName="RoomieMatch"
+        brandDescription="Find your ideal roommate and the perfect shared space. AI-powered matching for students and professionals across India."
+        socialLinks={[
+          { icon: <Github className="w-6 h-6" />, href: "https://github.com", label: "GitHub" },
+          { icon: <Mail className="w-6 h-6" />, href: "mailto:hello@roomiematch.com", label: "Email" },
+        ]}
+        navLinks={[
+          { label: "Home", href: "#" },
+          { label: "Explore Rooms", href: "#" },
+          { label: "About", href: "#" },
+          { label: "Contact", href: "#" },
+        ]}
+        brandIcon={<Logo iconOnly />}
+      />
     </div>
   );
 };

@@ -4,10 +4,24 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  scroll-behavior: smooth;
+}
+
 @layer base {
   :root {
     --font-sans: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
     --font-serif: 'Playfair Display', Georgia, serif;
+
+    /* Shadcn semantic color variables */
+    --background: 40 30% 98%;
+    --foreground: 215 25% 27%;
+    --muted: 40 20% 94%;
+    --muted-foreground: 215 15% 50%;
+    --primary: 43 65% 52%;
+    --primary-foreground: 0 0% 100%;
+    --border: 43 30% 85%;
+    --ring: 43 65% 52%;
   }
 
   body {

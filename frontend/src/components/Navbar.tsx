@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Bell, MessageSquare, Heart, User, LogOut, Menu, X, ShieldAlert, Sparkles } from 'lucide-react';
+import { Bell, MessageSquare, Heart, User, LogOut, Menu, X, ShieldAlert, Sparkles, UserCheck } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Logo } from './Logo';
 
 interface NavbarProps {
   currentView: string;
@@ -8,10 +10,11 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ currentView, setView }) => {
-  const { user, signOut, notifications, markNotificationsRead, respondToConnection } = useApp();
+  const { user, signOut, notifications, markNotificationsRead, respondToConnection, sendConnectionRequest } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [cursorPos, setCursorPos] = useState({ left: 0, width: 0, opacity: 0 });
 
   const unreadNotifications = notifications.filter(n => n.is_read === 0);
 
@@ -39,80 +42,51 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setView }) => {
     setProfileDropdownOpen(false);
   };
 
+  const navItems = [
+    { label: 'Home', view: 'landing', show: true },
+    { label: 'Explore Rooms', view: 'properties', show: true },
+    { label: 'Roommates', view: 'roommates', show: user && (user.role === 'seeker' || user.role === 'finder') },
+    { label: 'Chat', view: 'chat', show: user !== null, icon: MessageSquare },
+    { label: 'Wishlist', view: 'wishlist', show: user !== null && user.role !== 'admin', icon: Heart },
+    { label: 'Admin Portal', view: 'admin', show: user !== null && user.role === 'admin', icon: ShieldAlert },
+  ];
+
+  const visibleDesktop = navItems.filter(n => n.show);
+
   return (
     <nav className="sticky top-4 z-50 max-w-7xl mx-auto w-[92%] glass-navbar rounded-2xl px-6 py-4 transition-all duration-300">
       <div className="flex items-center justify-between">
         {/* Brand Logo */}
-        <div 
+        <motion.div
           onClick={() => handleNavClick('landing')}
-          className="flex items-center gap-2 cursor-pointer group"
+          className="flex items-center gap-2 cursor-pointer shrink-0"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
         >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-white font-serif font-extrabold text-xl shadow-gold transform group-hover:scale-105 transition-all duration-300">
-            R
-          </div>
-          <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-amber-600">
-            RoomieMatch
-          </span>
-        </div>
+          <Logo />
+        </motion.div>
 
-        {/* Desktop Navigation Links */}
-        <div className="hidden md:flex items-center gap-6">
-          <button 
-            onClick={() => handleNavClick('landing')}
-            className={`font-semibold transition-colors duration-200 ${currentView === 'landing' ? 'text-amber-600' : 'text-slate-500 hover:text-amber-600'}`}
-          >
-            Home
-          </button>
-          
-          <button 
-            onClick={() => handleNavClick('properties')}
-            className={`font-semibold transition-colors duration-200 ${currentView === 'properties' ? 'text-amber-600' : 'text-slate-500 hover:text-amber-600'}`}
-          >
-            Explore Rooms
-          </button>
-
-          {user && (user.role === 'seeker' || user.role === 'finder') && (
-            <button 
-              onClick={() => handleNavClick('roommates')}
-              className={`font-semibold transition-colors duration-200 ${currentView === 'roommates' ? 'text-amber-600' : 'text-slate-500 hover:text-amber-600'}`}
+        {/* Desktop Navigation with animated cursor */}
+        <ul
+          className="relative hidden md:flex items-center"
+          onMouseLeave={() => setCursorPos((pv) => ({ ...pv, opacity: 0 }))}
+        >
+          {visibleDesktop.map((item) => (
+            <NavTab
+              key={item.view}
+              isActive={currentView === item.view || (item.view === 'landing' && currentView === 'landing')}
+              setCursorPos={setCursorPos}
+              onClick={() => handleNavClick(item.view)}
             >
-              Roommates
-            </button>
-          )}
-
-          {user && (
-            <button 
-              onClick={() => handleNavClick('chat')}
-              className={`flex items-center gap-1.5 font-semibold transition-colors duration-200 ${currentView === 'chat' ? 'text-amber-600' : 'text-slate-500 hover:text-amber-600'}`}
-            >
-              <MessageSquare className="w-4 h-4" />
-              Chat
-            </button>
-          )}
-
-          {user && user.role !== 'admin' && (
-            <button 
-              onClick={() => handleNavClick('wishlist')}
-              className={`flex items-center gap-1.5 font-semibold transition-colors duration-200 ${currentView === 'wishlist' ? 'text-amber-600' : 'text-slate-500 hover:text-amber-600'}`}
-            >
-              <Heart className="w-4 h-4" />
-              Wishlist
-            </button>
-          )}
-
-          {user && user.role === 'admin' && (
-            <button 
-              onClick={() => handleNavClick('admin')}
-              className={`flex items-center gap-1 font-semibold text-rose-500 hover:opacity-80`}
-            >
-              <ShieldAlert className="w-4 h-4" />
-              Admin Portal
-            </button>
-          )}
-        </div>
+              {item.icon && <item.icon className="w-4 h-4" />}
+              {item.label}
+            </NavTab>
+          ))}
+          <CursorAnimator position={cursorPos} />
+        </ul>
 
         {/* Right side items */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           {user ? (
             <>
               {/* Notifications bell */}
@@ -131,7 +105,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setView }) => {
 
                 {/* Notifications dropdown menu */}
                 {notificationsOpen && (
-                  <div className="absolute right-0 mt-3 w-80 max-h-96 overflow-y-auto z-50 rounded-2xl border border-amber-200/60 bg-white shadow-xl p-4 transition-all duration-200">
+                  <div className="fixed left-4 right-4 top-20 md:absolute md:left-auto md:right-0 md:top-full md:mt-3 max-h-96 overflow-y-auto z-50 rounded-2xl border border-amber-200/60 bg-white shadow-xl p-4 transition-all duration-200">
                     <div className="flex justify-between items-center mb-3">
                       <h4 className="font-bold text-slate-800 flex items-center gap-1.5">
                         Notifications
@@ -143,7 +117,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setView }) => {
                         <p className="text-sm text-center py-4 text-slate-400">No notifications yet.</p>
                       ) : (
                         notifications.map((notif) => (
-                          <div 
+                          <div
                             key={notif.id}
                             className={`p-3 rounded-xl transition-all duration-200 border ${notif.is_read === 0 ? 'bg-amber-50/50 border-amber-200' : 'bg-slate-50/50 border-slate-200'}`}
                           >
@@ -157,21 +131,43 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setView }) => {
                               </span>
                             </div>
                             <p className="text-xs text-slate-600 mt-1">{notif.message}</p>
-                            
+
                             {/* Action items for connection requests */}
                             {notif.type === 'connection' && notif.metadata && (
                               <div className="flex items-center gap-2 mt-2">
-                                <button 
-                                  onClick={() => respondToConnection(notif.id, 'accepted')}
+                                <button
+                                  onClick={async () => {
+                                    const accepted = await respondToConnection(notif, 'accepted');
+                                    if (accepted) setView('chat');
+                                  }}
                                   className="px-3 py-1 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold text-[10px] rounded-lg shadow-sm hover:opacity-90"
                                 >
                                   Accept
                                 </button>
                                 <button 
-                                  onClick={() => respondToConnection(notif.id, 'rejected')}
+                                  onClick={() => respondToConnection(notif, 'rejected')}
                                   className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] rounded-lg"
                                 >
                                   Decline
+                                </button>
+                              </div>
+                            )}
+
+                            {/* Action items for match suggestions */}
+                            {notif.type === 'match' && notif.metadata?.matchUserId && (
+                              <div className="flex items-center gap-2 mt-2">
+                                <button
+                                  onClick={async () => {
+                                    const success = await sendConnectionRequest(notif.metadata.matchUserId);
+                                    if (success) {
+                                      // Visual feedback: disable the button
+                                      (document.activeElement as HTMLButtonElement)?.blur();
+                                    }
+                                  }}
+                                  className="px-3 py-1 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold text-[10px] rounded-lg shadow-sm hover:opacity-90 flex items-center gap-1"
+                                >
+                                  <UserCheck className="w-3 h-3" />
+                                  Send Request
                                 </button>
                               </div>
                             )}
@@ -198,7 +194,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setView }) => {
 
                 {/* Profile menu dropdown */}
                 {profileDropdownOpen && (
-                  <div className="absolute right-0 mt-3 w-56 rounded-2xl border border-amber-200/60 bg-white shadow-xl py-2 z-50">
+                  <div className="fixed right-4 left-4 top-20 md:absolute md:left-auto md:right-0 md:top-full md:mt-3 md:w-56 rounded-2xl border border-amber-200/60 bg-white shadow-xl py-2 z-50">
                     <div className="px-4 py-2 border-b border-slate-100">
                       <p className="font-bold text-slate-800 truncate">{user.name}</p>
                       <p className="text-xs text-slate-400 capitalize truncate">{user.role.replace('_', ' ')}</p>
@@ -211,7 +207,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setView }) => {
                       <User className="w-4 h-4 text-amber-500" />
                       My Dashboard
                     </button>
-                    
+
                     <button
                       onClick={() => handleNavClick('profile')}
                       className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-amber-50 flex items-center gap-2"
@@ -269,7 +265,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setView }) => {
           >
             Home
           </button>
-          
+
           <button
             onClick={() => handleNavClick('properties')}
             className={`w-full text-left py-2 px-3 rounded-lg font-semibold ${currentView === 'properties' ? 'bg-amber-50 text-amber-600' : 'text-slate-600 hover:bg-amber-50'}`}
@@ -332,5 +328,50 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setView }) => {
         </div>
       )}
     </nav>
+  );
+};
+
+const NavTab = ({
+  children,
+  setCursorPos,
+  onClick,
+  isActive,
+}: {
+  children: React.ReactNode;
+  setCursorPos: (pos: { left: number; width: number; opacity: number }) => void;
+  onClick: () => void;
+  isActive: boolean;
+}) => {
+  const ref = useRef<HTMLLIElement>(null);
+
+  return (
+    <li
+      ref={ref}
+      onMouseEnter={() => {
+        if (!ref.current) return;
+        const { width } = ref.current.getBoundingClientRect();
+        setCursorPos({
+          width,
+          opacity: 1,
+          left: ref.current.offsetLeft,
+        });
+      }}
+      onClick={onClick}
+      className={`relative z-10 block cursor-pointer px-3 py-1.5 text-xs uppercase md:px-4 md:py-2 md:text-sm font-semibold transition-colors duration-200 flex items-center gap-1.5 ${
+        isActive ? 'text-amber-600' : 'text-slate-500 hover:text-amber-600'
+      }`}
+    >
+      {children}
+    </li>
+  );
+};
+
+const CursorAnimator = ({ position }: { position: { left: number; width: number; opacity: number } }) => {
+  return (
+    <motion.li
+      animate={position}
+      className="absolute z-0 h-8 rounded-lg bg-amber-100 md:h-10"
+      style={{ top: '50%', transform: 'translateY(-50%)' }}
+    />
   );
 };

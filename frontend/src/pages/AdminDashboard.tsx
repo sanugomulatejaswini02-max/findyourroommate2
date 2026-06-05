@@ -23,13 +23,13 @@ interface Report {
 const AdminDashboardComponent: React.FC = () => {
   const { properties } = useApp();
   const [users, setUsers] = useState<User[]>([]);
-  const [reports] = useState<Report[]>([
+  const [reports, setReports] = useState<Report[]>([
     { id: '1', filer: 'Alice Johnson', reportedUser: 'Bob Smith', reason: 'Suspicious listing', status: 'pending' },
     { id: '2', filer: 'Charlie Brown', reportedUser: 'Diana Prince', reason: 'Fake profile', status: 'pending' },
   ]);
 
   useEffect(() => {
-    const stored = localStorage.getItem('mockUsers');
+    const stored = localStorage.getItem('fyr_users');
     if (stored) {
       setUsers(JSON.parse(stored));
     }
@@ -44,7 +44,7 @@ const AdminDashboardComponent: React.FC = () => {
   };
 
   const handleResolveReport = (id: string) => {
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, verified: true } : u));
+    setReports(prev => prev.map(r => r.id === id ? { ...r, status: 'resolved' } : r));
   };
 
   const totalSeekers = users.filter(u => u.role === 'seeker').length;

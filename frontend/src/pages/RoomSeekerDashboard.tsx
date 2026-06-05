@@ -129,11 +129,13 @@ export const RoomSeekerDashboard: React.FC<RoomSeekerDashboardProps> = ({
 
     const matchesBudget = prop.rent <= budgetLimit;
     const matchesType = selectedType === 'any' || prop.type === selectedType;
-    
-    // Simple mock filter check
+    const p = prop as any;
+    const matchesFurnish = selectedFurnish === 'any' || p.furnished === selectedFurnish;
+    const matchesGender = selectedGender === 'any' || p.gender_pref === selectedGender;
+
     const matchesAvailable = prop.is_available === 1;
 
-    return matchesSearch && matchesBudget && matchesType && matchesAvailable;
+    return matchesSearch && matchesBudget && matchesType && matchesAvailable && matchesFurnish && matchesGender;
   });
 
   // Find incoming connection/match alerts
@@ -206,7 +208,7 @@ export const RoomSeekerDashboard: React.FC<RoomSeekerDashboardProps> = ({
         <div className="space-y-6">
           
           {/* Search Bar & Filters Trigger */}
-          <div className="flex gap-3">
+          <div className="flex gap-2 sm:gap-3">
             <div className="flex-1 relative">
               <Search className="absolute left-4 top-3.5 w-4 h-4 text-slate-400" />
               <input
@@ -220,10 +222,10 @@ export const RoomSeekerDashboard: React.FC<RoomSeekerDashboardProps> = ({
             
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`p-3 border rounded-2xl flex items-center gap-2 text-xs font-bold transition-all ${showFilters ? 'bg-amber-500 border-amber-500 text-white' : 'bg-white border-slate-200/70 text-slate-700'}`}
+              className={`p-3 border rounded-2xl flex items-center gap-1 sm:gap-2 text-xs font-bold transition-all shrink-0 ${showFilters ? 'bg-amber-500 border-amber-500 text-white' : 'bg-white border-slate-200/70 text-slate-700'}`}
             >
               <SlidersHorizontal className="w-4 h-4" />
-              Filters
+              <span className="hidden sm:inline">Filters</span>
             </button>
           </div>
 

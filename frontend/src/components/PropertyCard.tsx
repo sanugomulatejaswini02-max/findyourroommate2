@@ -99,21 +99,21 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onClick })
         </p>
 
         {/* Footer Meta */}
-        <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-100">
-          <div className="flex items-center gap-4 text-xs text-slate-500 font-medium">
-            <div className="flex items-center gap-1">
-              <BedDouble className="w-4 h-4 text-slate-400" />
-              <span>{property.rooms} {property.rooms > 1 ? 'Rooms' : 'Room'}</span>
+          <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-100">
+            <div className="flex items-center gap-2 sm:gap-4 text-xs text-slate-500 font-medium">
+              <div className="flex items-center gap-1">
+                <BedDouble className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400" />
+                <span className="whitespace-nowrap">{property.rooms} {property.rooms > 1 ? 'Rooms' : 'Room'}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400" />
+                <span className="whitespace-nowrap">{new Date(property.available_from).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1">
-              <Calendar className="w-4 h-4 text-slate-400" />
-              <span>{new Date(property.available_from).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
-            </div>
-          </div>
 
-          <div className="text-amber-500 group-hover:translate-x-1.5 transition-transform duration-300">
-            <ArrowRight className="w-4 h-4" />
-          </div>
+            <div className="text-amber-500 group-hover:translate-x-1.5 transition-transform duration-300 shrink-0">
+              <ArrowRight className="w-4 h-4" />
+            </div>
         </div>
       </div>
     </div>

@@ -90,7 +90,7 @@ interface AppContextType {
   
   // Connection Operations
   sendConnectionRequest: (receiverId: number) => Promise<boolean>;
-  respondToConnection: (connectionId: number, status: 'accepted' | 'rejected') => Promise<void>;
+  respondToConnection: (notif: any, status: 'accepted' | 'rejected') => Promise<boolean>;
   getConnections: () => Promise<Connection[]>;
   
   // General Operations
@@ -432,12 +432,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateProfile = async (profileData: Partial<UserProfile>) => {
     if (!user) return false;
     try {
-      const dbPayload = { ...profileData };
-      if (profileData.lifestyle_habits) {
-        dbPayload.lifestyle_habits = JSON.stringify(profileData.lifestyle_habits) as any;
+      const dbPayload: Record<string, any> = { ...profileData };
+
+      // Stringify lifestyle_habits only if it's an object (not already a string)
+      if (profileData.lifestyle_habits && typeof profileData.lifestyle_habits === 'object') {
+        dbPayload.lifestyle_habits = JSON.stringify(profileData.lifestyle_habits);
       }
-      if (profileData.roommate_prefs) {
-        dbPayload.roommate_prefs = JSON.stringify(profileData.roommate_prefs) as any;
+
+      // Stringify roommate_prefs only if it's an object (not already a string)
+      if (profileData.roommate_prefs && typeof profileData.roommate_prefs === 'object') {
+        dbPayload.roommate_prefs = JSON.stringify(profileData.roommate_prefs);
       }
 
       const { error } = await supabase
@@ -447,7 +451,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       if (error) throw error;
 
-      // Update state
       const updatedUser = { 
         ...user, 
         ...profileData,
@@ -455,15 +458,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
       setUser(updatedUser);
       localStorage.setItem('fyr_mock_session', JSON.stringify(updatedUser));
-      
-      // Re-trigger roommate check after profile update
+
       if (user.role === 'seeker' || user.role === 'finder') {
         triggerInitialMatchingCheck(updatedUser);
       }
 
       return true;
     } catch (e) {
-      console.error(e);
+      console.error('Profile update failed:', e);
+      if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+        console.warn('localStorage quota exceeded. Profile picture may be too large.');
+      }
       return false;
     }
   };
@@ -737,13 +742,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const respondToConnection = async (connectionId: number, status: 'accepted' | 'rejected') => {
-    if (!user) return;
+  const respondToConnection = async (notif: any, status: 'accepted' | 'rejected') => {
+    if (!user || !notif?.metadata?.senderId) return;
     try {
+      const senderId = notif.metadata.senderId;
       const { data: conn } = await supabase
         .from('connections')
         .select('*')
-        .eq('id', connectionId)
+        .eq('sender_id', senderId)
+        .eq('receiver_id', user.id)
         .single();
 
       if (!conn) return;
@@ -751,19 +758,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await supabase
         .from('connections')
         .update({ status })
-        .eq('id', connectionId);
+        .eq('id', conn.id);
 
-      // Remove notification for this request
-      setNotifications(prev => prev.filter(n => !(n.type === 'connection' && n.metadata.senderId === conn.sender_id)));
+      // Remove notification from state and localStorage
+      setNotifications(prev => prev.filter(n => !(n.type === 'connection' && n.metadata?.senderId === senderId)));
+      if (isUsingMock) {
+        const allNotifs = JSON.parse(localStorage.getItem('fyr_notifications') || '[]');
+        const filtered = allNotifs.filter((n: any) => {
+          const meta = typeof n.metadata === 'string' ? JSON.parse(n.metadata || '{}') : (n.metadata || {});
+          return !(n.type === 'connection' && (meta.senderId === senderId || meta.senderId === user.id));
+        });
+        localStorage.setItem('fyr_notifications', JSON.stringify(filtered));
+      }
 
       if (status === 'accepted') {
         // Create chat room
-        const chatId = await createChatRoom(conn.sender_id);
+        const chatId = await createChatRoom(senderId);
         
         // Notify sender they were accepted
         if (isUsingMock) {
           triggerSimulatedNotification(
-            conn.sender_id,
+            senderId,
             'Connection Request Accepted!',
             `${user.name} accepted your connection request. Start chatting now!`,
             'connection',
@@ -781,6 +796,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       // Update data
       await loadUserData(user);
+      return status === 'accepted';
     } catch (e) {
       console.error(e);
     }
@@ -821,31 +837,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const triggerInitialMatchingCheck = async (currentUser: UserProfile) => {
     if (!isUsingMock) return;
     
-    // Find potential roommate matches in the mock DB
     const allUsers = JSON.parse(localStorage.getItem('fyr_users') || '[]');
     const otherUsers = allUsers.filter((u: any) => u.id !== currentUser.id && (u.role === 'seeker' || u.role === 'finder') && u.is_banned === 0);
     
+    // Check for existing match notifications to avoid duplicates
+    const existingNotifs = JSON.parse(localStorage.getItem('fyr_notifications') || '[]');
+    
     for (const other of otherUsers) {
-      // Check location match and score compatibility
       const areaA = (currentUser.preferred_area || '').trim().toLowerCase();
       const areaB = (other.preferred_area || '').trim().toLowerCase();
+      const cityA = (currentUser.city || '').trim().toLowerCase();
+      const cityB = (other.city || '').trim().toLowerCase();
       const budgetA = Number(currentUser.budget || 0);
       const budgetB = Number(other.budget || 0);
       
-      const isLocationMatch = areaA && areaB && areaA === areaB;
+      const isLocationMatch = areaA && areaB && areaA === areaB && cityA && cityB && cityA === cityB;
       const isBudgetMatch = budgetA > 0 && budgetB > 0 && Math.abs(budgetA - budgetB) <= 4000;
       
       if (isLocationMatch && isBudgetMatch) {
-        // Run AI match compatibility
         const { score, explanation } = await calculateRoommateCompatibility(currentUser, other);
         if (score >= 80) {
-          // Trigger a notification to connect
+          // Check if a match notification already exists for this pair
+          const alreadyNotified = existingNotifs.some((n: any) => {
+            const meta = typeof n.metadata === 'string' ? JSON.parse(n.metadata || '{}') : (n.metadata || {});
+            return n.type === 'match' && (meta.matchUserId === other.id || meta.matchUserId === currentUser.id);
+          });
+          
+          if (alreadyNotified) continue;
+
+          // Notify current user about the match
           triggerSimulatedNotification(
             currentUser.id,
-            'Live Match Found! 🎉',
-            `Potential roommate ${other.name} is looking in ${currentUser.preferred_area} with a budget of ₹${other.budget}. Match Score: ${score}%`,
+            'Potential Roommate Found!',
+            `${other.name}, ${other.age || ''} • ${other.occupation || 'Looking for roommate'} • ₹${other.budget || '?'}/mo — looking in ${currentUser.preferred_area}`,
             'match',
-            { matchUserId: other.id, score, explanation }
+            { matchUserId: other.id, score, explanation, name: other.name, age: other.age, occupation: other.occupation, budget: other.budget, preferred_area: other.preferred_area, profile_pic: other.profile_pic, city: other.city }
+          );
+
+          // Also notify the other user about the current user
+          triggerSimulatedNotification(
+            other.id,
+            'Potential Roommate Found!',
+            `${currentUser.name}, ${currentUser.age || ''} • ${currentUser.occupation || 'Looking for roommate'} • ₹${currentUser.budget || '?'}/mo — looking in ${currentUser.preferred_area}`,
+            'match',
+            { matchUserId: currentUser.id, score, explanation, name: currentUser.name, age: currentUser.age, occupation: currentUser.occupation, budget: currentUser.budget, preferred_area: currentUser.preferred_area, profile_pic: currentUser.profile_pic, city: currentUser.city }
           );
         }
       }

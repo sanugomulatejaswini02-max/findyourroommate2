@@ -55,7 +55,7 @@ const ScoreRing: React.FC<{ score: number }> = ({ score }) => {
   const offset = circumference - (score / 100) * circumference;
   return (
     <div className="relative flex items-center justify-center">
-      <svg width="176" height="176" className="transform -rotate-90">
+      <svg viewBox="0 0 176 176" className="w-36 sm:w-44 h-36 sm:h-44 transform -rotate-90">
         <circle cx="88" cy="88" r={radius} fill="none" stroke="#e5e7eb" strokeWidth="8" />
         <circle
           cx="88" cy="88" r={radius}
@@ -96,7 +96,7 @@ const AIMatchResultsComponent: React.FC<AIMatchResultsPageProps> = ({ match, set
           <h2 className="text-2xl font-bold text-slate-800 mb-2">No Active Match Selected</h2>
           <p className="text-slate-500 mb-6">Please go back and select a match to view detailed results.</p>
           <button
-            onClick={() => setView('dashboard')}
+            onClick={() => setView(user?.role === 'finder' ? 'roommates' : 'dashboard-seeker')}
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
           >
             <ArrowLeft className="w-4 h-4" /> Back to Dashboard
@@ -122,7 +122,7 @@ const AIMatchResultsComponent: React.FC<AIMatchResultsPageProps> = ({ match, set
     <div className="min-h-screen bg-amber-50/30">
       <div className="max-w-6xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
         <button
-          onClick={() => setView('dashboard')}
+          onClick={() => setView(user?.role === 'finder' ? 'roommates' : 'dashboard-seeker')}
           className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-800 transition-colors mb-6 group"
         >
           <div className="p-1.5 rounded-lg bg-white/90 border border-amber-200/20 group-hover:border-amber-300/40 transition-all">

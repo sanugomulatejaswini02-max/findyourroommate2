@@ -14,7 +14,7 @@ export const UserProfilePage: React.FC = () => {
   const [bio, setBio] = useState(user?.bio || '');
   const [city, setCity] = useState(user?.city || 'Bengaluru');
   const [area, setArea] = useState(user?.preferred_area || '');
-  const [budget, setBudget] = useState(user?.budget || 12000);
+  const [budget, setBudget] = useState(user?.budget !== undefined ? user.budget : 12000);
   const [profilePic, setProfilePic] = useState(user?.profile_pic || '');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -45,6 +45,8 @@ export const UserProfilePage: React.FC = () => {
   const [food, setFood] = useState<'veg' | 'non-veg' | 'any'>(userHabits.food || 'any');
   const [noise, setNoise] = useState<'low' | 'medium' | 'high'>(userHabits.noise || 'medium');
   const [guests, setGuests] = useState<'no' | 'weekends' | 'anytime'>(userHabits.guests || 'weekends');
+  const [work, setWork] = useState<'day' | 'night' | 'flexible'>(userHabits.work || 'day');
+  const [study, setStudy] = useState<'regular' | 'flexible'>(userHabits.study || 'regular');
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +57,7 @@ export const UserProfilePage: React.FC = () => {
     setLoading(true);
     setSuccessMsg('');
 
-    const habitsObj = { sleep, cleanliness, smoking, drinking, food, noise, guests };
+    const habitsObj = { sleep, cleanliness, smoking, drinking, food, noise, guests, work, study };
 
     const success = await updateProfile({
       name,
@@ -311,7 +313,32 @@ export const UserProfilePage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Work Schedule</label>
+                  <select
+                    value={work}
+                    onChange={(e) => setWork(e.target.value as any)}
+                    className="w-full px-3 py-2 bg-white border-amber-200 rounded-xl text-xs"
+                  >
+                    <option value="day">Day Worker</option>
+                    <option value="night">Night Worker</option>
+                    <option value="flexible">Flexible Schedule</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Study Habit</label>
+                  <select
+                    value={study}
+                    onChange={(e) => setStudy(e.target.value as any)}
+                    className="w-full px-3 py-2 bg-white border-amber-200 rounded-xl text-xs"
+                  >
+                    <option value="regular">Regular Study Routine</option>
+                    <option value="flexible">Flexible Study Hours</option>
+                  </select>
+                </div>
+
                 <div>
                   <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Noise Tolerance</label>
                   <select

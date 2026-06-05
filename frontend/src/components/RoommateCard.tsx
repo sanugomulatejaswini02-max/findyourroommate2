@@ -41,7 +41,7 @@ export const RoommateCard: React.FC<RoommateCardProps> = ({
   return (
     <div className="relative flex flex-col bg-white border border-amber-200/60 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300">
       {/* Profile Pic Header */}
-      <div className="relative aspect-square w-full bg-slate-100 overflow-hidden">
+      <div className="relative aspect-[4/3] sm:aspect-square w-full bg-slate-100 overflow-hidden">
         <img
           src={profile.profile_pic || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=250'}
           alt={profile.name}

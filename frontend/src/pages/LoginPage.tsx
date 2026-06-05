@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { LogIn, Mail, Lock, AlertCircle, Info } from 'lucide-react';
+import { LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
 
 interface LoginPageProps {
   setView: (view: string) => void;
@@ -36,11 +36,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ setView }) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickLogin = (mockEmail: string, mockPass: string) => {
-    setEmail(mockEmail);
-    setPassword(mockPass);
   };
 
   return (
@@ -113,49 +108,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ setView }) => {
               Sign Up
             </button>
           </p>
-        </div>
-      </div>
-
-      <div className="mt-8 max-w-md w-full bg-white border border-amber-200/50 p-6 rounded-3xl shadow-sm">
-        <div className="flex gap-2 items-start text-amber-600">
-          <Info className="w-5 h-5 shrink-0 mt-0.5" />
-          <div>
-            <h4 className="font-bold text-sm text-slate-800">Testing Credentials</h4>
-            <p className="text-[11px] text-slate-500 leading-relaxed mt-1">
-              Select one of the simulated roles below to fill in details and explore dashboards immediately:
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 mt-4">
-          <button
-            onClick={() => handleQuickLogin('owner@example.com', 'password123')}
-            className="text-[10px] text-left p-2.5 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors border border-amber-100"
-          >
-            <p className="font-extrabold text-slate-800">Owner</p>
-            <p className="text-slate-500 font-normal">owner@example.com</p>
-          </button>
-          <button
-            onClick={() => handleQuickLogin('seeker1@example.com', 'password123')}
-            className="text-[10px] text-left p-2.5 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors border border-amber-100"
-          >
-            <p className="font-extrabold text-slate-800">Seeker (Aanya)</p>
-            <p className="text-slate-500 font-normal">seeker1@example.com</p>
-          </button>
-          <button
-            onClick={() => handleQuickLogin('finder1@example.com', 'password123')}
-            className="text-[10px] text-left p-2.5 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors border border-amber-100"
-          >
-            <p className="font-extrabold text-slate-800">Finder (Priyanka)</p>
-            <p className="text-slate-500 font-normal">finder1@example.com</p>
-          </button>
-          <button
-            onClick={() => handleQuickLogin('admin@example.com', 'admin123')}
-            className="text-[10px] text-left p-2.5 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors border border-amber-100"
-          >
-            <p className="font-extrabold text-slate-800">Admin</p>
-            <p className="text-slate-500 font-normal">admin@example.com</p>
-          </button>
         </div>
       </div>
     </div>

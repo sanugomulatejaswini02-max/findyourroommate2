@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { MapPin, Calendar, BedDouble, Eye, Heart, MessageSquare, ArrowLeft, Phone, Mail, UserCheck, Shield } from 'lucide-react';
+import { MapPin, Calendar, BedDouble, Eye, Heart, MessageSquare, ArrowLeft, Mail, UserCheck, Shield } from 'lucide-react';
 
 interface PropertyDetailsPageProps {
   property: any;
@@ -215,19 +215,25 @@ export const PropertyDetailsPage: React.FC<PropertyDetailsPageProps> = ({ proper
                 Chat with Owner
               </button>
 
-              {revealPhone ? (
-                <div className="p-3 bg-slate-50 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold text-slate-800 border border-slate-200">
-                  <Phone className="w-4 h-4 text-emerald-500" />
-                  <span>+91 98765 43210</span>
-                </div>
+              {owner?.email ? (
+                revealPhone ? (
+                  <div className="p-3 bg-slate-50 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold text-slate-800 border border-slate-200">
+                    <Mail className="w-4 h-4 text-emerald-500" />
+                    <span>{owner.email}</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setRevealPhone(true)}
+                    className="w-full py-3 border border-slate-200 hover:bg-slate-100 font-bold text-xs text-slate-700 rounded-xl transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <Mail className="w-4 h-4" />
+                    Show Contact
+                  </button>
+                )
               ) : (
-                <button
-                  onClick={() => setRevealPhone(true)}
-                  className="w-full py-3 border border-slate-200 hover:bg-slate-100 font-bold text-xs text-slate-700 rounded-xl transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <Phone className="w-4 h-4" />
-                  Show Phone Number
-                </button>
+                <div className="p-3 bg-amber-50 rounded-xl text-xs font-medium text-slate-500 border border-amber-100 text-center">
+                  Use Chat to contact the owner
+                </div>
               )}
             </div>
 

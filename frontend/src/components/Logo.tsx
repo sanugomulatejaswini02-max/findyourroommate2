@@ -1,0 +1,34 @@
+import React from 'react';
+
+interface LogoProps {
+  className?: string;
+  showText?: boolean;
+  iconOnly?: boolean;
+}
+
+export const Logo: React.FC<LogoProps> = ({ className = '', showText = true, iconOnly = false }) => {
+  return (
+    <div className={`flex items-center gap-2 ${className}`}>
+      <div className="relative w-10 h-10 flex items-center justify-center">
+        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+          <defs>
+            <linearGradient id="logoBg" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#f59e0b" />
+              <stop offset="100%" stopColor="#b45309" />
+            </linearGradient>
+          </defs>
+          <rect width="40" height="40" rx="10" fill="url(#logoBg)" />
+          <path d="M20 8L10 16v12a2 2 0 002 2h16a2 2 0 002-2V16L20 8z" fill="rgba(255,255,255,0.2)" stroke="white" strokeWidth="1.5" />
+          <circle cx="16" cy="22" r="2.5" fill="white" />
+          <circle cx="24" cy="22" r="2.5" fill="white" />
+          <path d="M14 30c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+        </svg>
+      </div>
+      {showText && !iconOnly && (
+        <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-amber-600 whitespace-nowrap">
+          RoomieMatch
+        </span>
+      )}
+    </div>
+  );
+};

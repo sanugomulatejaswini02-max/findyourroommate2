@@ -3,7 +3,12 @@ import { useApp } from '../context/AppContext';
 import { ChatWindow } from '../components/ChatWindow';
 import { MessageSquare, Search, Sparkles } from 'lucide-react';
 
-export const ChatPage: React.FC = () => {
+interface ChatPageProps {
+  setView?: (view: string) => void;
+  setSelectedProperty?: (prop: any) => void;
+}
+
+export const ChatPage: React.FC<ChatPageProps> = ({ setView, setSelectedProperty }) => {
   const { chats, activeChatId, selectChat } = useApp();
   const [chatSearch, setChatSearch] = useState('');
 
@@ -26,7 +31,7 @@ export const ChatPage: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
 
-        <div className="bg-white/90 border border-amber-200/20 shadow-glass rounded-3xl overflow-hidden shadow-sm flex flex-col h-[600px]">
+        <div className="bg-white/90 border border-amber-200/20 shadow-glass rounded-3xl overflow-hidden shadow-sm flex flex-col h-80 md:h-[600px]">
           <div className="p-4 border-b border-slate-100 bg-amber-50/50">
             <div className="relative">
               <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
@@ -102,7 +107,7 @@ export const ChatPage: React.FC = () => {
         </div>
 
         <div className="md:col-span-2">
-          <ChatWindow />
+          <ChatWindow setView={setView} setSelectedProperty={setSelectedProperty} />
         </div>
 
       </div>
