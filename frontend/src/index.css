@@ -1,0 +1,77 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-sans: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+    --font-serif: 'Playfair Display', Georgia, serif;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    @apply antialiased text-slate-800 bg-gradient-to-br from-amber-50/30 via-white to-amber-50/20;
+  }
+}
+
+.font-serif {
+  font-family: var(--font-serif);
+}
+
+/* Glassmorphism Classes */
+.glass-panel {
+  @apply bg-white/90 backdrop-blur-md border border-amber-200/30 shadow-glass;
+}
+
+.glass-navbar {
+  @apply sticky top-4 z-40 mx-auto max-w-7xl bg-white/90 backdrop-blur-lg border border-amber-200/20 shadow-sm;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-amber-300/60 rounded-full hover:bg-amber-400/80;
+}
+
+/* Custom micro-animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.95); opacity: 0.5; }
+  50% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.5; }
+}
+
+.animate-ring {
+  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.bg-radial-gold {
+  background: radial-gradient(circle at 50% 50%, rgba(212, 175, 55, 0.06) 0%, transparent 60%);
+}
+
+/* Glow effects */
+.glow-primary {
+  box-shadow: 0 0 25px -5px rgba(212, 175, 55, 0.3);
+}
+
+.glow-accent {
+  box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.3);
+}
