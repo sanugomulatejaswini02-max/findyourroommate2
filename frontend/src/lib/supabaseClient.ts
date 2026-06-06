@@ -57,9 +57,11 @@ class MockDatabase {
   }
 
   seedHyderabadData() {
-    const users = this.getTable('users');
-    const properties = this.getTable('properties');
-    if (users.length > 0 || properties.length > 0) return;
+    try {
+      const users = JSON.parse(localStorage.getItem('fyr_users') || '[]');
+      const properties = JSON.parse(localStorage.getItem('fyr_properties') || '[]');
+      if (users.length > 0 || properties.length > 0) return;
+    } catch { return; }
 
     const owner = {
       id: 1,
