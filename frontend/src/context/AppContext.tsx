@@ -748,17 +748,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const respondToConnection = async (notif: any, status: 'accepted' | 'rejected') => {
-    if (!user || !notif?.metadata?.senderId) return;
+    if (!user || !notif?.metadata?.senderId) return false;
     try {
       const senderId = notif.metadata.senderId;
-      const { data: conn } = await supabase
+      const { data: conns } = await supabase
         .from('connections')
         .select('*')
-        .eq('sender_id', senderId)
-        .eq('receiver_id', user.id)
-        .single();
-
-      if (!conn) return;
+        .or(`sender_id.eq.${senderId},receiver_id.eq.${senderId}`);
+      const conn = Array.isArray(conns)
+        ? conns.find((c: any) => c.sender_id === user.id || c.receiver_id === user.id)
+        : null;
+      if (!conn) return false;
 
       await supabase
         .from('connections')
@@ -804,6 +804,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return status === 'accepted';
     } catch (e) {
       console.error(e);
+      return false;
     }
   };
 

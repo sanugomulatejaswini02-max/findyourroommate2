@@ -19,12 +19,15 @@ class MockDatabase {
   }
 
   initLocalStorage() {
-    // Clear old data on version change to remove any stale seed data
     const DB_VERSION = '2';
     if (localStorage.getItem('fyr_db_version') !== DB_VERSION) {
+      const sessionBackup = localStorage.getItem('fyr_mock_session');
       const keys = Object.keys(localStorage).filter(k => k.startsWith('fyr_'));
       keys.forEach(k => localStorage.removeItem(k));
       localStorage.setItem('fyr_db_version', DB_VERSION);
+      if (sessionBackup) {
+        localStorage.setItem('fyr_mock_session', sessionBackup);
+      }
     }
     if (!localStorage.getItem('fyr_users')) {
       localStorage.setItem('fyr_users', JSON.stringify([]));
@@ -54,7 +57,13 @@ class MockDatabase {
 
   getTable(name) {
     this.initLocalStorage();
-    return JSON.parse(localStorage.getItem(`fyr_${name}`) || '[]');
+    try {
+      return JSON.parse(localStorage.getItem(`fyr_${name}`) || '[]');
+    } catch {
+      console.error(`Corrupted localStorage data for fyr_${name}, resetting.`);
+      localStorage.setItem(`fyr_${name}`, '[]');
+      return [];
+    }
   }
 
   setTable(name, data) {
@@ -83,15 +92,33 @@ class MockQueryBuilder {
     return this;
   }
 
+  in(column: string, values: any[]) {
+    this.filters.push((row) => values.includes(row[column]));
+    return this;
+  }
+
+  or(filterString: string) {
+    const conditions = filterString.split(',');
+    this.filters.push((row) => {
+      return conditions.some(cond => {
+        const [field, op, ...valParts] = cond.split('.');
+        const value = valParts.join('.');
+        if (op === 'eq') return String(row[field]) === value;
+        return false;
+      });
+    });
+    return this;
+  }
+
   eq(column: string, value: any) {
-    this.filters.push((row) => row[column] === value);
+    this.filters.push((row) => String(row[column]) === String(value));
     return this;
   }
 
   match(queryObj: Record<string, any>) {
     this.filters.push((row) => {
       for (const key in queryObj) {
-        if (row[key] !== queryObj[key]) return false;
+        if (String(row[key]) !== String(queryObj[key])) return false;
       }
       return true;
     });
@@ -149,7 +176,13 @@ class MockQueryBuilder {
     }
 
     if (this.isSingle) {
-      return { data: rows[0] || null, error: null };
+      if (rows.length === 0) {
+        return { data: null, error: null };
+      }
+      if (rows.length > 1) {
+        return { data: null, error: new Error('Multiple or no rows returned for single() query') };
+      }
+      return { data: rows[0], error: null };
     }
 
     return { data: rows, error: null };
@@ -234,6 +267,14 @@ class MockQueryBuilder {
   then(onfulfilled?: (value: any) => any, onrejected?: (reason: any) => any) {
     return Promise.resolve(this.execute()).then(onfulfilled, onrejected);
   }
+
+  catch(onrejected?: (reason: any) => any) {
+    return Promise.resolve(this.execute()).catch(onrejected);
+  }
+
+  finally(onfinally?: (() => void) | undefined | null) {
+    return Promise.resolve(this.execute()).finally(onfinally!);
+  }
 }
 
 // Global active session state for mock auth
@@ -254,17 +295,21 @@ const mockChannelListeners: Record<string, Array<(payload: any) => void>> = {};
 const mockAuth = {
   signUp: async ({ email, password, options }: any) => {
     const users = mockDB.getTable('users');
-    const existing = users.find((u) => u.email === email);
+    const normalizedEmail = email.toLowerCase();
+    const existing = users.find((u) => u.email === normalizedEmail);
     if (existing) {
       return { data: { user: null }, error: new Error('User already exists') };
     }
 
+    const stringifyIfObj = (val: any) =>
+      typeof val === 'string' ? val : JSON.stringify(val || {});
+
     const newUser = {
       id: users.length > 0 ? Math.max(...users.map((u) => u.id || 0)) + 1 : 1,
-      email,
-      name: options?.data?.name || email.split('@')[0],
+      email: normalizedEmail,
+      name: options?.data?.name || normalizedEmail.split('@')[0],
       role: options?.data?.role || 'seeker',
-      password_hash: password, // simple storage for mock
+      password_hash: password,
       age: options?.data?.age || 20,
       gender: options?.data?.gender || 'other',
       occupation: options?.data?.occupation || '',
@@ -274,9 +319,9 @@ const mockAuth = {
       city: options?.data?.city || 'Bengaluru',
       preferred_area: options?.data?.preferred_area || '',
       budget: options?.data?.budget || 0,
-      lifestyle_habits: JSON.stringify(options?.data?.lifestyle_habits || {}),
-      roommate_prefs: JSON.stringify(options?.data?.roommate_prefs || {}),
-      is_verified: options?.data?.role === 'owner' ? 0 : 1, // owners require admin verify, seekers/finders auto-verify in mock
+      lifestyle_habits: stringifyIfObj(options?.data?.lifestyle_habits),
+      roommate_prefs: stringifyIfObj(options?.data?.roommate_prefs),
+      is_verified: options?.data?.role === 'owner' ? 0 : 1,
       is_banned: 0,
       created_at: new Date().toISOString()
     };
@@ -284,17 +329,17 @@ const mockAuth = {
     users.push(newUser);
     mockDB.setTable('users', users);
 
-    // Auto login
     mockActiveUser = newUser;
-    localStorage.setItem('fyr_mock_session', JSON.stringify(newUser));
-    triggerAuthStateChange('SIGNED_IN', newUser);
+    const { password_hash, ...safeUser } = newUser;
+    localStorage.setItem('fyr_mock_session', JSON.stringify(safeUser));
+    triggerAuthStateChange('SIGNED_IN', safeUser);
 
-    return { data: { user: newUser, session: { user: newUser } }, error: null };
+    return { data: { user: safeUser, session: { user: safeUser } }, error: null };
   },
 
   signInWithPassword: async ({ email, password }: any) => {
     const users = mockDB.getTable('users');
-    const user = users.find((u) => u.email === email && u.password_hash === password);
+    const user = users.find((u) => u.email === email.toLowerCase() && u.password_hash === password);
     if (!user) {
       return { data: { user: null }, error: new Error('Invalid email or password') };
     }
@@ -304,10 +349,11 @@ const mockAuth = {
     }
 
     mockActiveUser = user;
-    localStorage.setItem('fyr_mock_session', JSON.stringify(user));
-    triggerAuthStateChange('SIGNED_IN', user);
+    const { password_hash, ...safeUser } = user;
+    localStorage.setItem('fyr_mock_session', JSON.stringify(safeUser));
+    triggerAuthStateChange('SIGNED_IN', safeUser);
 
-    return { data: { user, session: { user } }, error: null };
+    return { data: { user: safeUser, session: { user: safeUser } }, error: null };
   },
 
   signOut: async () => {
@@ -318,13 +364,16 @@ const mockAuth = {
   },
 
   getUser: async () => {
-    // Refresh active user from DB in case profile was edited
     if (mockActiveUser) {
       const users = mockDB.getTable('users');
       const latest = users.find((u) => u.id === mockActiveUser.id);
       if (latest) {
-        mockActiveUser = latest;
-        localStorage.setItem('fyr_mock_session', JSON.stringify(latest));
+        const { password_hash, ...safeUser } = latest;
+        mockActiveUser = safeUser;
+        localStorage.setItem('fyr_mock_session', JSON.stringify(safeUser));
+      } else {
+        mockActiveUser = null;
+        localStorage.removeItem('fyr_mock_session');
       }
     }
     return { data: { user: mockActiveUser }, error: null };

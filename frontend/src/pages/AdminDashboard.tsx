@@ -3,13 +3,12 @@ import { Users, Home, AlertOctagon, MessageSquare, Ban, Check, ShieldAlert, Spar
 import { useApp } from '../context/AppContext';
 
 interface User {
-  id: string;
+  id: number;
   name: string;
   email: string;
   role: string;
-  avatar: string;
-  verified: boolean;
-  banned: boolean;
+  profile_pic: string;
+  is_banned: number;
 }
 
 interface Report {
@@ -28,19 +27,24 @@ const AdminDashboardComponent: React.FC = () => {
     { id: '2', filer: 'Charlie Brown', reportedUser: 'Diana Prince', reason: 'Fake profile', status: 'pending' },
   ]);
 
+  const persistUsers = (updatedUsers: User[]) => {
+    setUsers(updatedUsers);
+    localStorage.setItem('fyr_users', JSON.stringify(updatedUsers));
+  };
+
   useEffect(() => {
     const stored = localStorage.getItem('fyr_users');
     if (stored) {
-      setUsers(JSON.parse(stored));
+      try { setUsers(JSON.parse(stored)); } catch { setUsers([]); }
     }
   }, []);
 
-  const handleToggleBan = (id: string) => {
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, banned: !u.banned } : u));
+  const handleToggleBan = (id: number) => {
+    persistUsers(users.map(u => u.id === id ? { ...u, is_banned: u.is_banned ? 0 : 1 } : u));
   };
 
-  const handleToggleVerify = (id: string) => {
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, verified: !u.verified } : u));
+  const handleToggleVerify = (id: number) => {
+    persistUsers(users.map(u => u.id === id ? { ...u, is_banned: 0 } : u));
   };
 
   const handleResolveReport = (id: string) => {
@@ -126,21 +130,17 @@ const AdminDashboardComponent: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                        user.verified
-                          ? 'bg-emerald-50 text-emerald-700'
-                          : 'bg-amber-50 text-amber-700'
-                      }`}>
-                        {user.verified ? 'Verified' : 'Unverified'}
+                      <span className="text-xs font-semibold px-3 py-1 rounded-full bg-emerald-50 text-emerald-700">
+                        Verified
                       </span>
                     </td>
                     <td className="py-3 px-4">
                       <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                        user.banned
+                        user.is_banned
                           ? 'bg-rose-50 text-rose-700'
                           : 'bg-slate-100 text-slate-600'
                       }`}>
-                        {user.banned ? 'Banned' : 'Active'}
+                        {user.is_banned ? 'Banned' : 'Active'}
                       </span>
                     </td>
                     <td className="py-3 px-4">
@@ -150,18 +150,18 @@ const AdminDashboardComponent: React.FC = () => {
                           className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all duration-200 bg-gradient-to-r from-amber-500 to-amber-700 text-white hover:shadow-md hover:from-amber-600 hover:to-amber-800"
                         >
                           <Check className="w-3.5 h-3.5" />
-                          {user.verified ? 'Unverify' : 'Verify'}
+                          Activate
                         </button>
                         <button
                           onClick={() => handleToggleBan(user.id)}
                           className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all duration-200 ${
-                            user.banned
+                            user.is_banned
                               ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                               : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
                           }`}
                         >
-                          {user.banned ? <UserCheck className="w-3.5 h-3.5" /> : <Ban className="w-3.5 h-3.5" />}
-                          {user.banned ? 'Unban' : 'Ban'}
+                          {user.is_banned ? <UserCheck className="w-3.5 h-3.5" /> : <Ban className="w-3.5 h-3.5" />}
+                          {user.is_banned ? 'Unban' : 'Ban'}
                         </button>
                       </div>
                     </td>

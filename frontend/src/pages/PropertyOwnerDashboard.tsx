@@ -49,17 +49,21 @@ export const PropertyOwnerDashboard: React.FC<PropertyOwnerDashboardProps> = ({ 
   
   // Simulated interest count: chats or wishlists relating to owner's properties
   const myPropIds = myProperties.map(p => p.id);
+  const safeParse = (str: string) => { try { return JSON.parse(str); } catch { return []; } };
   const totalSaves = myProperties.reduce((sum, p) => {
-    // In mock, read wishlists count directly
-    const wishListRecords = JSON.parse(localStorage.getItem('fyr_wishlists') || '[]');
+    const wishListRecords = safeParse(localStorage.getItem('fyr_wishlists') || '[]');
     const savesForThisProp = wishListRecords.filter((w: any) => w.property_id === p.id).length;
     return sum + savesForThisProp;
   }, 0);
 
   // Interested users count
   const interestedUsersCount = myProperties.reduce((sum, p) => {
-    const notifs = JSON.parse(localStorage.getItem('fyr_notifications') || '[]');
-    const matches = notifs.filter((n: any) => n.user_id === user?.id && n.metadata && JSON.parse(n.metadata || '{}').propertyId === p.id);
+    const notifs = safeParse(localStorage.getItem('fyr_notifications') || '[]');
+    const matches = notifs.filter((n: any) => {
+      if (!n.metadata) return false;
+      const meta = typeof n.metadata === 'string' ? safeParse(n.metadata) : (n.metadata || {});
+      return n.user_id === user?.id && meta.propertyId === p.id;
+    });
     return sum + matches.length;
   }, 0) + chats.length;
 

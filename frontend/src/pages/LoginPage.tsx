@@ -7,7 +7,7 @@ interface LoginPageProps {
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ setView }) => {
-  const { signIn, user } = useApp();
+  const { signIn } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -24,9 +24,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ setView }) => {
     setLoading(true);
     try {
       const loggedUser = await signIn(email, password);
-      if (loggedUser.role === 'owner') {
+      const role = loggedUser?.user_metadata?.role || loggedUser?.role;
+      if (role === 'owner') {
         setView('dashboard-owner');
-      } else if (loggedUser.role === 'admin') {
+      } else if (role === 'admin') {
         setView('admin');
       } else {
         setView('dashboard-seeker');
