@@ -53,6 +53,104 @@ class MockDatabase {
     if (!localStorage.getItem('fyr_wishlists')) {
       localStorage.setItem('fyr_wishlists', JSON.stringify([]));
     }
+    this.seedHyderabadData();
+  }
+
+  seedHyderabadData() {
+    const users = this.getTable('users');
+    const properties = this.getTable('properties');
+    if (users.length > 0 || properties.length > 0) return;
+
+    const owner = {
+      id: 1,
+      name: 'Suresh Reddy',
+      email: 'suresh@example.com',
+      password_hash: 'password123',
+      role: 'owner',
+      age: 38,
+      gender: 'male',
+      occupation: 'Property Manager',
+      college_company: 'HYD Properties Pvt Ltd',
+      profile_pic: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+      bio: 'Managing premium student and professional accommodations across Hyderabad.',
+      city: 'Hyderabad',
+      preferred_area: 'Gachibowli',
+      budget: 0,
+      lifestyle_habits: JSON.stringify({}),
+      roommate_prefs: JSON.stringify({}),
+      is_verified: 1,
+      is_banned: 0,
+      created_at: new Date().toISOString()
+    };
+
+    const hydProperties = [
+      {
+        id: 1,
+        owner_id: 1,
+        title: 'Modern 2BHK near Gachibowli IT Hub',
+        type: '2BHK',
+        rent: 22000,
+        deposit: 55000,
+        location: 'Gachibowli, Hyderabad',
+        landmark: 'Opposite HITEX Exhibition Centre',
+        description: 'Spacious 2BHK apartment with power backup, fully modular kitchen, and high-speed internet. Close to all major IT offices in Gachibowli. Ideal for working professionals.',
+        amenities: JSON.stringify(['WiFi', 'AC', 'Furnished', 'Kitchen', 'Security', 'Parking']),
+        available_from: '2026-07-01',
+        rooms: 2,
+        photos: JSON.stringify([
+          'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600',
+          'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600'
+        ]),
+        is_available: 1,
+        views: 67,
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 2,
+        owner_id: 1,
+        title: 'Cozy PG for Working Women in Kondapur',
+        type: 'PG',
+        rent: 8500,
+        deposit: 12000,
+        location: 'Kondapur, Hyderabad',
+        landmark: 'Near Botanical Garden, behind TCS Synergy Park',
+        description: 'Safe and clean PG accommodation for women with home-cooked meals (breakfast & dinner included). CCTV security, WiFi, attached washrooms, and weekly housekeeping.',
+        amenities: JSON.stringify(['WiFi', 'Furnished', 'Kitchen', 'Laundry', 'Security']),
+        available_from: '2026-06-15',
+        rooms: 5,
+        photos: JSON.stringify([
+          'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=600',
+          'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=600'
+        ]),
+        is_available: 1,
+        views: 112,
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 3,
+        owner_id: 1,
+        title: '1BHK Independent Room near Hitech City Metro',
+        type: '1BHK',
+        rent: 14000,
+        deposit: 30000,
+        location: 'Hitech City, Hyderabad',
+        landmark: '2 min walk from Hitech City Metro Station',
+        description: 'Independent 1BHK room with attached bathroom and private balcony. Walking distance to Hitech City metro and all IT offices. Power backup, AC, and purified water provided.',
+        amenities: JSON.stringify(['WiFi', 'AC', 'Furnished', 'Security']),
+        available_from: '2026-06-20',
+        rooms: 1,
+        photos: JSON.stringify([
+          'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?w=600',
+          'https://images.unsplash.com/photo-1505691938895-1758d7feb511?w=600'
+        ]),
+        is_available: 1,
+        views: 89,
+        created_at: new Date().toISOString()
+      }
+    ];
+
+    this.setTable('users', [owner]);
+    this.setTable('properties', hydProperties);
   }
 
   getTable(name) {
