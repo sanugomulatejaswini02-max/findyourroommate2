@@ -128,12 +128,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setUser(profile);
             // Load application data for this user
             await loadUserData(profile);
+            // Refresh properties listed by all owners so seekers can see them
+            await refreshProperties();
           } else {
             setUser(null);
+            await refreshProperties();
           }
         } catch (e) {
           console.error('Error fetching user profile:', e);
           setUser(null);
+          await refreshProperties();
         }
       } else {
         setUser(null);
@@ -142,6 +146,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setChats([]);
         setActiveChatId(null);
         setMessages([]);
+        await refreshProperties();
       }
       setLoading(false);
     });
