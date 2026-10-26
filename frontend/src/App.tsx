@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
+import { isViewAllowed, resolveHomeView } from './lib/userRouting';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/ui/modem-animated-footer';
 import { Logo } from './components/Logo';
@@ -18,36 +19,37 @@ import { ChatPage } from './pages/ChatPage';
 import { UserProfilePage } from './pages/UserProfilePage';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { motion, AnimatePresence } from 'framer-motion';
+import { AccountTypePage } from './pages/AccountTypePage';
+import { OwnerOnboardingPage } from './pages/OwnerOnboardingPage';
 const AppContent: React.FC = () => {
   const { user, loading } = useApp();
   const [view, setView] = useState<string>('landing');
   const [selectedProperty, setSelectedProperty] = useState<any>(null);
   const [selectedMatch, setSelectedMatch] = useState<any>(null);
+  const restoredSessionRef = useRef(false);
 
-  // Sync dashboard views on auth changes
+  // Restore the correct screen after login/refresh, and block illegal role jumps.
   useEffect(() => {
-    if (user) {
-      if (user.role === 'owner') {
-        setView('dashboard-owner');
-      } else if (user.role === 'admin') {
-        setView('admin');
-      } else if (user.role === 'seeker') {
-        // Check if seeker onboarding is done (budget & preferred area set)
-        if (!user.preferred_area || !user.budget) {
-          setView('role-selection');
-        } else {
-          setView('dashboard-seeker');
-        }
-      } else if (user.role === 'finder') {
-        setView('roommates');
-      }
-    } else {
-      // Keep on landing or auth views if logged out
-      if (view !== 'login' && view !== 'signup' && view !== 'properties') {
+    if (loading) return;
+
+    if (!user) {
+      restoredSessionRef.current = false;
+      if (!['login', 'signup', 'login-user', 'login-owner', 'properties', 'landing'].includes(view)) {
         setView('landing');
       }
+      return;
     }
-  }, [user]);
+
+    if (!restoredSessionRef.current) {
+      restoredSessionRef.current = true;
+      setView(resolveHomeView(user));
+      return;
+    }
+
+    if (!isViewAllowed(user, view)) {
+      setView(resolveHomeView(user));
+    }
+  }, [user, loading, view]);
 
   if (loading) {
     return (
@@ -62,9 +64,19 @@ const AppContent: React.FC = () => {
   const renderView = () => {
     switch (view) {
       case 'landing':
-        return <LandingPage setView={setView} isLoggedIn={!!user} />;
-      case 'login':
-        return <LoginPage setView={setView} />;
+  return <LandingPage setView={setView} isLoggedIn={!!user} />;
+
+case 'account-type':
+  return <AccountTypePage setView={setView} />;
+  case 'owner-onboarding':
+  return <OwnerOnboardingPage setView={setView} />;
+
+case 'login':
+  return <LoginPage setView={setView} />;
+  case 'login-user':
+  return <LoginPage setView={setView} accountType="user" />;
+  case 'login-owner':
+  return <LoginPage setView={setView} accountType="owner" />;
       case 'signup':
         return <SignupPage setView={setView} />;
       case 'role-selection':
@@ -82,7 +94,12 @@ const AppContent: React.FC = () => {
       case 'roommates':
         return <RoommateFinderDashboard setView={setView} setSelectedMatch={setSelectedMatch} />;
       case 'property-details':
-        return <PropertyDetailsPage property={selectedProperty} setView={setView} />;
+        return (
+          <PropertyDetailsPage
+            property={selectedProperty}
+            setView={setView}
+          />
+        );
       case 'ai-match-details':
         return <AIMatchResultsPage match={selectedMatch} setView={setView} />;
       case 'wishlist':

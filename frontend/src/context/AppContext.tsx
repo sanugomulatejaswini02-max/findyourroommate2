@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase, isUsingMock, triggerSimulatedRealtimeMessage, triggerSimulatedNotification } from '../lib/supabaseClient';
 import { calculateRoommateCompatibility, UserProfile, LifestyleHabits } from '../lib/aiMatching';
+import { getLookingFor } from '../lib/userRouting';
 
 interface Property {
   id: number;
@@ -103,6 +104,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const isSigningUp = useRef(false);
   const [properties, setProperties] = useState<Property[]>([]);
   const [wishlist, setWishlist] = useState<number[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -116,8 +118,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setLoading(true);
       if (session?.user) {
-        // Fetch detailed profile
-        try {
+  // Ignore the temporary signed-in session created during signup.
+  // Signup will explicitly sign the user out and send them to Login.
+  if (isSigningUp.current) {
+    setLoading(false);
+    return;
+  }
+
+  // Fetch detailed profile
+  try {
           const { data: profile, error } = await supabase
             .from('users')
             .select('*')
@@ -399,7 +408,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // --- AUTH ACTIONS ---
   const signUp = async (email: string, password: string, name: string, role: string, additionalData: any = {}) => {
-    const { data, error } = await supabase.auth.signUp({
+  isSigningUp.current = true;
+
+  const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -411,7 +422,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
-    if (error) throw error;
+    if (error) {
+  isSigningUp.current = false;
+  throw error;
+}
     
     // Automatically trigger live roommate matching check on the client-side for seeker/finder
     if (role === 'seeker' || role === 'finder') {
@@ -422,17 +436,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-    if (error) throw error;
-    return data.user;
-  };
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error) throw error;
+
+  // Get the user's actual profile from the database
+  if (data.user?.email) {
+    const { data: profile, error: profileError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', data.user.email)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error('Error fetching user profile:', profileError);
+    }
+
+    // Return the actual saved profile, including owner/user role
+    if (profile) {
+      setUser(profile);
+      return profile;
+    }
+  }
+
+  return data.user;
+};
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-  };
+  await supabase.auth.signOut();
+  isSigningUp.current = false;
+};
 
   const updateProfile = async (profileData: Partial<UserProfile>) => {
     if (!user) return false;
@@ -456,15 +492,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       if (error) throw error;
 
-      const updatedUser = { 
+      const updatedUser: UserProfile = { 
         ...user, 
         ...profileData,
-        lifestyle_habits: typeof profileData.lifestyle_habits === 'object' ? JSON.stringify(profileData.lifestyle_habits) : profileData.lifestyle_habits
+        lifestyle_habits: typeof profileData.lifestyle_habits === 'object'
+          ? JSON.stringify(profileData.lifestyle_habits)
+          : profileData.lifestyle_habits,
+        roommate_prefs: typeof profileData.roommate_prefs === 'object'
+          ? JSON.stringify(profileData.roommate_prefs)
+          : (profileData.roommate_prefs ?? user.roommate_prefs)
       };
       setUser(updatedUser);
-      localStorage.setItem('fyr_mock_session', JSON.stringify(updatedUser));
+      if (isUsingMock) {
+        localStorage.setItem('fyr_mock_session', JSON.stringify(updatedUser));
+      }
 
-      if (user.role === 'seeker' || user.role === 'finder') {
+      const lookingFor = getLookingFor(updatedUser);
+      if (lookingFor === 'roommate_only' || lookingFor === 'room_roommate' || updatedUser.role === 'finder') {
         triggerInitialMatchingCheck(updatedUser);
       }
 
@@ -845,7 +889,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!isUsingMock) return;
     
     const allUsers = JSON.parse(localStorage.getItem('fyr_users') || '[]');
-    const otherUsers = allUsers.filter((u: any) => u.id !== currentUser.id && (u.role === 'seeker' || u.role === 'finder') && u.is_banned === 0);
+    const otherUsers = allUsers.filter((u: any) => {
+      if (u.id === currentUser.id || u.is_banned === 1) return false;
+      const looking = getLookingFor(u);
+      return looking === 'roommate_only' || looking === 'room_roommate' || u.role === 'finder';
+    });
     
     // Check for existing match notifications to avoid duplicates
     const existingNotifs = JSON.parse(localStorage.getItem('fyr_notifications') || '[]');

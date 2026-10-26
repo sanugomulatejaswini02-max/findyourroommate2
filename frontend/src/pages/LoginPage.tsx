@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { resolveHomeView } from '../lib/userRouting';
 import { LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
 
 interface LoginPageProps {
   setView: (view: string) => void;
+  accountType?: 'user' | 'owner';
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ setView }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ setView, accountType }) => {
   const { signIn } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,14 +26,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ setView }) => {
     setLoading(true);
     try {
       const loggedUser = await signIn(email, password);
-      const role = loggedUser?.user_metadata?.role || loggedUser?.role;
-      if (role === 'owner') {
-        setView('dashboard-owner');
-      } else if (role === 'admin') {
-        setView('admin');
-      } else {
-        setView('dashboard-seeker');
-      }
+      setView(resolveHomeView(loggedUser));
     } catch (err: any) {
       setError(err.message || 'Failed to sign in. Please try again.');
     } finally {

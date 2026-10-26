@@ -4,6 +4,7 @@ import { RoommateCard } from '../components/RoommateCard';
 import { PropertyCard } from '../components/PropertyCard';
 import { Search, SlidersHorizontal, UserCheck, Sparkles, Home, Heart, X, Compass, AlertCircle } from 'lucide-react';
 import { calculateRoommateCompatibility, UserProfile } from '../lib/aiMatching';
+import { getLookingFor } from '../lib/userRouting';
 
 interface RoomSeekerDashboardProps {
   setView: (view: string) => void;
@@ -144,15 +145,16 @@ export const RoomSeekerDashboard: React.FC<RoomSeekerDashboardProps> = ({
   return (
     <div className="min-h-screen bg-amber-50/30 text-slate-800 py-10 max-w-7xl mx-auto w-[92%]">
       
-      {/* Title */}
-      <div className="mb-6">
-        <h2 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 via-amber-600 to-amber-500">
-          Find Your Perfect Match
-        </h2>
-        <p className="text-xs text-slate-400 mt-1">
-          Currently configured for: <span className="font-extrabold text-amber-500 uppercase">{isLookingForRoommate ? 'Room + Roommate (Option B)' : 'Room Only (Option A)'}</span>
-        </p>
-      </div>
+     {/* Title */}
+<div className="mb-6">
+  <h2 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 via-amber-600 to-amber-500">
+    Explore Available Rooms
+  </h2>
+
+  <p className="text-xs text-slate-400 mt-1">
+    Browse available rooms and properties based on your preferences.
+  </p>
+</div>
 
       {/* Live Roommate Alert Banner */}
       {isLookingForRoommate && matchAlerts.length > 0 && (

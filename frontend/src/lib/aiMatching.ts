@@ -19,6 +19,8 @@ export interface UserProfile {
   name: string;
   email: string;
   role: string;
+  account_type?: 'owner' | 'user' | string;
+  phone?: string;
   age?: number;
   gender?: string;
   occupation?: string;
@@ -29,7 +31,7 @@ export interface UserProfile {
   preferred_area?: string;
   budget?: number;
   lifestyle_habits?: string | LifestyleHabits;
-  roommate_prefs?: string;
+  roommate_prefs?: string | Record<string, any>;
 }
 
 export async function calculateRoommateCompatibility(userA: UserProfile, userB: UserProfile): Promise<{ score: number; explanation: string }> {

@@ -1,18 +1,17 @@
 import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { compressImage } from '../utils/compressImage';
-import { UserPlus, Mail, Lock, User, ShieldAlert, AlertCircle, Home, UserCheck, Search, Upload } from 'lucide-react';
+import { UserPlus, Mail, Lock, User, AlertCircle } from 'lucide-react';
 
 interface SignupPageProps {
   setView: (view: string) => void;
 }
 
 export const SignupPage: React.FC<SignupPageProps> = ({ setView }) => {
-  const { signUp } = useApp();
+  const { signUp, signOut } = useApp();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'owner' | 'seeker' | 'finder'>('seeker');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [profilePic, setProfilePic] = useState('');
@@ -39,40 +38,19 @@ export const SignupPage: React.FC<SignupPageProps> = ({ setView }) => {
     setError('');
     setLoading(true);
     try {
-      await signUp(email, password, name, role, { profile_pic: profilePic || undefined });
-      // Route based on role
-      if (role === 'owner') {
-        setView('dashboard-owner');
-      } else {
-        setView('role-selection'); // Seekers choose option A or B onboarding
-      }
+      await signUp(email, password, name, 'seeker', {
+  profile_pic: profilePic || undefined
+});
+
+await signOut();
+
+setView('login');
     } catch (err: any) {
       setError(err.message || 'Failed to create account. Please try again.');
     } finally {
       setLoading(false);
     }
   };
-
-  const roles = [
-    {
-      id: 'owner',
-      title: 'Property Owner',
-      desc: 'I have rooms, flats, or PG beds to rent out.',
-      icon: <Home className="w-5 h-5 text-amber-600" />
-    },
-    {
-      id: 'seeker',
-      title: 'Room Seeker',
-      desc: 'I am looking for a room, with or without a roommate.',
-      icon: <Search className="w-5 h-5 text-amber-500" />
-    },
-    {
-      id: 'finder',
-      title: 'Roommate Finder',
-      desc: 'I want to find a compatible roommate first.',
-      icon: <UserCheck className="w-5 h-5 text-emerald-500" />
-    }
-  ];
 
   return (
     <div className="min-h-[85vh] flex flex-col items-center justify-center p-6 bg-amber-50/30 text-slate-800">
@@ -93,28 +71,6 @@ export const SignupPage: React.FC<SignupPageProps> = ({ setView }) => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* User Role Card Grid Selector */}
-          <div>
-            <label className="block text-xs font-bold text-slate-500 mb-2.5 uppercase tracking-wide">
-              Select Your Role
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {roles.map((r) => (
-                <div
-                  key={r.id}
-                  onClick={() => setRole(r.id as any)}
-                  className={`p-4 border rounded-2xl cursor-pointer hover:border-amber-400 hover:bg-slate-50/20 transition-all ${role === r.id ? 'border-amber-500 bg-amber-50 ring-2 ring-amber-500/20' : 'border-amber-200/40'}`}
-                >
-                  <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center mb-3">
-                    {r.icon}
-                  </div>
-                  <h4 className="font-bold text-xs text-slate-800 leading-tight">{r.title}</h4>
-                  <p className="text-[10px] text-slate-400 mt-1 leading-normal">{r.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wide">

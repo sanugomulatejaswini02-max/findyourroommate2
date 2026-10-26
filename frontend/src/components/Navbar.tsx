@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { Bell, MessageSquare, Heart, User, LogOut, Menu, X, ShieldAlert, Sparkles, UserCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Logo } from './Logo';
+import { getLookingFor, isOwnerAccount, isUserAccount, resolveHomeView } from '../lib/userRouting';
 
 interface NavbarProps {
   currentView: string;
@@ -42,12 +43,17 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setView }) => {
     setProfileDropdownOpen(false);
   };
 
+  const lookingFor = getLookingFor(user);
+  const userAccount = isUserAccount(user);
+  const ownerAccount = isOwnerAccount(user);
+
   const navItems = [
     { label: 'Home', view: 'landing', show: true },
-    { label: 'Explore Rooms', view: 'properties', show: true },
-    { label: 'Roommates', view: 'roommates', show: user && (user.role === 'seeker' || user.role === 'finder') },
+    { label: 'Explore Rooms', view: 'properties', show: !userAccount || lookingFor !== 'roommate_only' },
+    { label: 'Roommates', view: 'roommates', show: userAccount && (lookingFor === 'roommate_only' || lookingFor === 'room_roommate') },
+    { label: 'Switch Role', view: 'role-selection', show: userAccount },
     { label: 'Chat', view: 'chat', show: user !== null, icon: MessageSquare },
-    { label: 'Wishlist', view: 'wishlist', show: user !== null && user.role !== 'admin', icon: Heart },
+    { label: 'Wishlist', view: 'wishlist', show: user !== null && user.role !== 'admin' && !ownerAccount, icon: Heart },
     { label: 'Admin Portal', view: 'admin', show: user !== null && user.role === 'admin', icon: ShieldAlert },
   ];
 
@@ -200,8 +206,9 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setView }) => {
                       <p className="text-xs text-slate-400 capitalize truncate">{user.role.replace('_', ' ')}</p>
                     </div>
 
+
                     <button
-                      onClick={() => handleNavClick(user.role === 'owner' ? 'dashboard-owner' : user.role === 'admin' ? 'admin' : 'dashboard-seeker')}
+                      onClick={() => handleNavClick(resolveHomeView(user))}
                       className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-amber-50 flex items-center gap-2"
                     >
                       <User className="w-4 h-4 text-amber-500" />
@@ -266,19 +273,30 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setView }) => {
             Home
           </button>
 
-          <button
-            onClick={() => handleNavClick('properties')}
-            className={`w-full text-left py-2 px-3 rounded-lg font-semibold ${currentView === 'properties' ? 'bg-amber-50 text-amber-600' : 'text-slate-600 hover:bg-amber-50'}`}
-          >
-            Explore Rooms
-          </button>
+          {(!userAccount || lookingFor !== 'roommate_only') && (
+            <button
+              onClick={() => handleNavClick('properties')}
+              className={`w-full text-left py-2 px-3 rounded-lg font-semibold ${currentView === 'properties' ? 'bg-amber-50 text-amber-600' : 'text-slate-600 hover:bg-amber-50'}`}
+            >
+              Explore Rooms
+            </button>
+          )}
 
-          {user && (user.role === 'seeker' || user.role === 'finder') && (
+          {userAccount && (lookingFor === 'roommate_only' || lookingFor === 'room_roommate') && (
             <button
               onClick={() => handleNavClick('roommates')}
               className={`w-full text-left py-2 px-3 rounded-lg font-semibold ${currentView === 'roommates' ? 'bg-amber-50 text-amber-600' : 'text-slate-600 hover:bg-amber-50'}`}
             >
               Roommates
+            </button>
+          )}
+
+          {userAccount && (
+            <button
+              onClick={() => handleNavClick('role-selection')}
+              className={`w-full text-left py-2 px-3 rounded-lg font-semibold ${currentView === 'role-selection' ? 'bg-amber-50 text-amber-600' : 'text-slate-600 hover:bg-amber-50'}`}
+            >
+              Switch Role
             </button>
           )}
 
@@ -291,7 +309,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, setView }) => {
             </button>
           )}
 
-          {user && user.role !== 'admin' && (
+          {user && user.role !== 'admin' && !ownerAccount && (
             <button
               onClick={() => handleNavClick('wishlist')}
               className={`w-full text-left py-2 px-3 rounded-lg font-semibold ${currentView === 'wishlist' ? 'bg-amber-50 text-amber-600' : 'text-slate-600 hover:bg-amber-50'}`}

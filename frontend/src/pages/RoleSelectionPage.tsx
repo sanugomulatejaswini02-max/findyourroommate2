@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Home, Users, Search, ArrowRight, ArrowLeft, Send } from 'lucide-react';
+import { getLookingFor, isOwnerAccount, parseRoommatePrefs, resolveHomeView } from '../lib/userRouting';
+import { Home, Users, ArrowRight, ArrowLeft, Send } from 'lucide-react';
 
 interface RoleSelectionPageProps {
   setView: (view: string) => void;
@@ -9,13 +10,24 @@ interface RoleSelectionPageProps {
 export const RoleSelectionPage: React.FC<RoleSelectionPageProps> = ({ setView }) => {
   const { user, updateProfile } = useApp();
   
-  // Steps: 0 = Choose A vs B, 1 = Form A (Room Only), 2 = Form B (Room + Roommate)
-  const [step, setStep] = useState<0 | 1 | 2>(0);
+  // Steps: 0 = three user roles, 1 = Only Room, 2 = Room + Roommate, 3 = Only Roommate
+  const [step, setStep] = useState<0 | 1 | 2 | 3>(0);
   const [loading, setLoading] = useState(false);
+  const currentLookingFor = getLookingFor(user);
+
+  useEffect(() => {
+    if (!user) {
+      setView('login');
+      return;
+    }
+    if (isOwnerAccount(user)) {
+      setView(resolveHomeView(user));
+    }
+  }, [user, setView]);
 
   // Form A state
-  const [prefArea, setPrefArea] = useState('');
-  const [prefBudget, setPrefBudget] = useState(15000);
+  const [prefArea, setPrefArea] = useState(user?.preferred_area || '');
+  const [prefBudget, setPrefBudget] = useState(user?.budget || 15000);
   const [prefPropType, setPrefPropType] = useState('Shared Apartment');
   const [prefGender, setPrefGender] = useState('any');
   const [prefFurnished, setPrefFurnished] = useState('any');
@@ -45,12 +57,14 @@ export const RoleSelectionPage: React.FC<RoleSelectionPageProps> = ({ setView })
     }
     setLoading(true);
     
-    // Save preferences inside roommate_prefs or as user attributes
     const success = await updateProfile({
-      city: 'Bengaluru',
+      account_type: 'user',
+      role: 'seeker',
+      city: user?.city || 'Hyderabad',
       preferred_area: prefArea,
       budget: prefBudget,
       roommate_prefs: JSON.stringify({
+        ...parseRoommatePrefs(user),
         property_type: prefPropType,
         gender_preference: prefGender,
         furnished_preference: prefFurnished,
@@ -87,16 +101,19 @@ export const RoleSelectionPage: React.FC<RoleSelectionPageProps> = ({ setView })
     };
 
     const success = await updateProfile({
+      account_type: 'user',
+      role: 'seeker',
       age,
       gender,
       occupation,
       college_company: collegeCompany,
       bio,
-      city: 'Bengaluru',
+      city: user?.city || 'Hyderabad',
       preferred_area: prefArea,
       budget: prefBudget,
       lifestyle_habits: habitsObj,
       roommate_prefs: JSON.stringify({
+        ...parseRoommatePrefs(user),
         gender: gender === 'male' ? 'male' : gender === 'female' ? 'female' : 'any',
         looking_for: 'room_roommate'
       })
@@ -109,7 +126,55 @@ export const RoleSelectionPage: React.FC<RoleSelectionPageProps> = ({ setView })
       alert('Failed to save preferences. Please try again.');
     }
   };
+const handleFormCSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
+  if (!prefArea || !occupation) {
+    alert('Please fill in your area and occupation');
+    return;
+  }
+
+  setLoading(true);
+
+  const habitsObj = {
+    sleep,
+    cleanliness,
+    smoking,
+    drinking,
+    food,
+    noise,
+    guests,
+    work,
+    study
+  };
+
+  const success = await updateProfile({
+    account_type: 'user',
+    role: 'finder',
+    age,
+    gender,
+    occupation,
+    college_company: collegeCompany,
+    bio,
+    city: user?.city || 'Hyderabad',
+    preferred_area: prefArea,
+    budget: prefBudget,
+    lifestyle_habits: habitsObj,
+    roommate_prefs: JSON.stringify({
+      ...parseRoommatePrefs(user),
+      gender: gender === 'male' ? 'male' : gender === 'female' ? 'female' : 'any',
+      looking_for: 'roommate_only'
+    })
+  });
+
+  setLoading(false);
+
+  if (success) {
+    setView('roommates');
+  } else {
+    alert('Failed to save roommate profile. Please try again.');
+  }
+};
   return (
     <div className="min-h-[90vh] bg-amber-50/30 text-slate-800 py-12 flex items-center justify-center p-6">
       
@@ -120,12 +185,25 @@ export const RoleSelectionPage: React.FC<RoleSelectionPageProps> = ({ setView })
             <h2 className="text-3xl sm:text-4xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 via-amber-600 to-amber-500">
               Tell us what you're looking for
             </h2>
-            <p className="text-xs sm:text-sm text-slate-405 mt-2">
-              Help us tailor your search experience by choosing your room hunt option.
+            <p className="text-xs sm:text-sm text-slate-400 mt-2">
+              Choose Only Room, Only Roommate, or Room + Roommate. You can switch this later without creating a new account.
             </p>
+            {currentLookingFor && (
+              <div className="mt-3 space-y-2">
+                <p className="text-xs font-bold text-amber-600">
+                  Current role: {currentLookingFor === 'room_only' ? 'Only Room' : currentLookingFor === 'roommate_only' ? 'Only Roommate' : 'Room + Roommate'}
+                </p>
+                <button
+                  onClick={() => setView(resolveHomeView(user))}
+                  className="text-xs font-bold text-slate-400 hover:text-slate-600"
+                >
+                  ← Back to dashboard
+                </button>
+              </div>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
             {/* Option A: Room Only */}
             <div 
               onClick={() => setStep(1)}
@@ -169,6 +247,30 @@ export const RoleSelectionPage: React.FC<RoleSelectionPageProps> = ({ setView })
                 Complete matching profile <ArrowRight className="w-4 h-4" />
               </div>
             </div>
+            {/* Option C: Only Roommate */}
+<div
+  onClick={() => setStep(3)}
+  className="group glass-panel p-8 rounded-[30px] border-2 border-amber-200/50 hover:border-amber-500 hover:shadow-xl cursor-pointer"
+>
+  <div>
+    <div className="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center mb-6">
+      <Users className="w-6 h-6 text-emerald-600" />
+    </div>
+
+    <h3 className="font-extrabold text-xl text-slate-800 group-hover:text-emerald-600">
+      Option C: Only Roommate
+    </h3>
+
+    <p className="text-xs text-slate-400 leading-relaxed mt-3">
+      I already have a room or place to stay and only want to find a compatible roommate.
+    </p>
+  </div>
+
+  <div className="mt-8 flex items-center gap-1 text-xs font-bold text-emerald-600">
+    Create roommate profile
+    <ArrowRight className="w-4 h-4" />
+  </div>
+</div>
           </div>
         </div>
       )}
@@ -278,7 +380,210 @@ export const RoleSelectionPage: React.FC<RoleSelectionPageProps> = ({ setView })
           </form>
         </div>
       )}
+{step === 3 && (
+  <div className="max-w-2xl w-full bg-white border border-amber-200/60 rounded-3xl p-8 shadow-xl max-h-[85vh] overflow-y-auto">
 
+    <div className="flex justify-between items-center mb-6">
+      <button
+        onClick={() => setStep(0)}
+        className="text-xs font-bold text-slate-400 hover:text-slate-600 flex items-center gap-1"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back
+      </button>
+
+      <h3 className="font-bold text-slate-800 text-lg">
+        Roommate Profile
+      </h3>
+    </div>
+
+    <form onSubmit={handleFormCSubmit} className="space-y-5">
+
+      <div>
+        <h4 className="font-extrabold text-xs text-emerald-600 uppercase tracking-wider mb-4">
+          Basic Information
+        </h4>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase">
+              Age
+            </label>
+            <input
+              type="number"
+              value={age}
+              onChange={(e) => setAge(Number(e.target.value))}
+              className="w-full px-4 py-3 bg-white border border-amber-200 rounded-2xl text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase">
+              Gender
+            </label>
+            <select
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+              className="w-full px-4 py-3 bg-white border border-amber-200 rounded-2xl text-sm"
+            >
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="any">Prefer not to say</option>
+            </select>
+          </div>
+
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase">
+          Preferred Area
+        </label>
+        <input
+          type="text"
+          required
+          value={prefArea}
+          onChange={(e) => setPrefArea(e.target.value)}
+          placeholder="e.g. Gachibowli, Madhapur"
+          className="w-full px-4 py-3 bg-white border border-amber-200 rounded-2xl text-sm"
+        />
+      </div>
+
+      <div>
+        <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase">
+          Monthly Budget (₹)
+        </label>
+        <input
+          type="number"
+          required
+          value={prefBudget}
+          onChange={(e) => setPrefBudget(Number(e.target.value))}
+          className="w-full px-4 py-3 bg-white border border-amber-200 rounded-2xl text-sm"
+        />
+      </div>
+
+      <div>
+        <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase">
+          Occupation
+        </label>
+        <input
+          type="text"
+          required
+          value={occupation}
+          onChange={(e) => setOccupation(e.target.value)}
+          placeholder="Student / Working Professional"
+          className="w-full px-4 py-3 bg-white border border-amber-200 rounded-2xl text-sm"
+        />
+      </div>
+
+      <div>
+        <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase">
+          College / Company
+        </label>
+        <input
+          type="text"
+          value={collegeCompany}
+          onChange={(e) => setCollegeCompany(e.target.value)}
+          placeholder="College or company name"
+          className="w-full px-4 py-3 bg-white border border-amber-200 rounded-2xl text-sm"
+        />
+      </div>
+
+      <div>
+        <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase">
+          About You
+        </label>
+        <textarea
+          value={bio}
+          onChange={(e) => setBio(e.target.value)}
+          placeholder="Tell potential roommates a little about yourself..."
+          rows={4}
+          className="w-full px-4 py-3 bg-white border border-amber-200 rounded-2xl text-sm resize-none"
+        />
+      </div>
+
+      <div>
+        <h4 className="font-extrabold text-xs text-emerald-600 uppercase tracking-wider mb-4">
+          Lifestyle Preferences
+        </h4>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1.5">
+              Sleep Schedule
+            </label>
+            <select
+              value={sleep}
+              onChange={(e) => setSleep(e.target.value as 'early' | 'night')}
+              className="w-full px-4 py-3 bg-white border border-amber-200 rounded-2xl text-sm"
+            >
+              <option value="early">Early Sleeper</option>
+              <option value="night">Night Owl</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1.5">
+              Cleanliness
+            </label>
+            <select
+              value={cleanliness}
+              onChange={(e) => setCleanliness(e.target.value as 'high' | 'medium' | 'low')}
+              className="w-full px-4 py-3 bg-white border border-amber-200 rounded-2xl text-sm"
+            >
+              <option value="high">Very Clean</option>
+              <option value="medium">Moderately Clean</option>
+              <option value="low">Relaxed</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1.5">
+              Food Preference
+            </label>
+            <select
+              value={food}
+              onChange={(e) => setFood(e.target.value as 'veg' | 'non-veg' | 'any')}
+              className="w-full px-4 py-3 bg-white border border-amber-200 rounded-2xl text-sm"
+            >
+              <option value="any">Any</option>
+              <option value="veg">Vegetarian</option>
+              <option value="non-veg">Non-Vegetarian</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1.5">
+              Noise Preference
+            </label>
+            <select
+              value={noise}
+              onChange={(e) => setNoise(e.target.value as 'low' | 'medium' | 'high')}
+              className="w-full px-4 py-3 bg-white border border-amber-200 rounded-2xl text-sm"
+            >
+              <option value="low">Quiet</option>
+              <option value="medium">Moderate</option>
+              <option value="high">Doesn't Matter</option>
+            </select>
+          </div>
+
+        </div>
+      </div>
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-700 hover:opacity-95 text-white font-extrabold rounded-2xl shadow-lg flex items-center justify-center gap-2"
+      >
+        {loading ? 'Saving Profile...' : 'Create Roommate Profile'}
+        <ArrowRight className="w-4 h-4" />
+      </button>
+
+    </form>
+  </div>
+)}
       {step === 2 && (
         /* STEP 2: FORM B (Room + Roommate Profile Match) */
         <div className="max-w-2xl w-full bg-white border border-amber-200/60 rounded-3xl p-8 shadow-xl max-h-[85vh] overflow-y-auto">
@@ -491,7 +796,6 @@ export const RoleSelectionPage: React.FC<RoleSelectionPageProps> = ({ setView })
           </form>
         </div>
       )}
-
     </div>
   );
 };
